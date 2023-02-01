@@ -2,11 +2,8 @@ import curses
 import random
 import time
 from threading import Thread
-import os
 
 main_screen = curses.initscr()
-
-# os.system("""start cmd cd Desktop/"Curses Asteroids Game python main.py""")
 
 # Resize the window to the specific size to work with the coordinates
 curses.resize_term(20, 50)
@@ -39,13 +36,12 @@ top_border_position_x = [i for i in range(0, 28)]
 bottom_border_position_y = 18
 
 class Asteroid:
-    spawn_chance = 10 # Stablishing the chance of an asteroid having the ability to spawn
 
     def __init__(self):
 
-        # Assign a randwom coordinate inside the box
+        # Assign a random coordinate inside the box
         self.x = random.choice(top_border_position_x)
-        self.y = top_border_position_y
+        self.y = top_border_position_y + 1
 
         # Append the asteroid to the Asteroids list
         Asteroids.append(self)
@@ -55,7 +51,7 @@ class Asteroid:
         self.Athread.start()
     
     def __del__(self):
-        box.add(self.y, self.x, " ")
+        box.addch(self.y, self.x, " ")
         return False
 
     # Draw and return the asteroid sprite
@@ -73,13 +69,61 @@ class Asteroid:
 
         # Start the movement algorithm
         while True:
-            self.Check_Collision()
             box.addch(self.y, self.x, " ")
-            self.x += random.randint(-1, 1)
-            self.y += random.randint(0, 1)
-            if self.y == bottom_border_position_y + 1:
-                return False
+
+            # # If the position of the Asteroid is not the bottom of the border then continue normally
+            if self.y is not bottom_border_position_y and self.x != 28:
+                self.x += random.randint(-1, 1)
+                self.y += random.randint(0, 1)
+
+            # If the position in the x-axis is bigger than the largest position in of the x-axis of the border than delete the Asteroid
+            elif self.x == 29:
+                # Remove the Asteroid from the Asteroid list to update the amount of playable Asteroids
+                Asteroids.pop(Asteroids.index(self))
+
+                # Delete the Asteroid before it has a chance to cause any bugs to the other playable entities
                 del self
+
+                # Return false to stop the movement of the Asteroid
+                return False
+
+            # If the position in the x-axis is bigger than the smallest position in the x-axis of the border than delete the Asteroid
+            elif self.x == 1:
+                # Remove the Asteroid from the Asteroid list to update the amount of playable Asteroids
+                Asteroids.pop(Asteroids.index(self))
+
+                # Delete the Asteroid before it has a chance to cause any bugs to the other playable entities
+                del self
+
+                # Return false to stop the movement of the Asteroid
+                return False
+
+            # If the position of the Asteroid is the same as the position of any other entity then kill the Asteroid
+            else:
+                for i in all_positions:
+                    if self.x is i.x and self.y is i.y and i != self:
+
+                        # Remove the Asteroid from the Asteroid list to update the amount of playable Asteroids
+                        Asteroids.pop(Asteroids.index(self))
+
+                        # Delete the Asteroid before it has a chance to cause any bugs to the other playable entities
+                        del self
+
+                        # Return false to stop the movement of the Asteroid
+                        return False
+
+                # If the Asteroid reached the bottom of the border then delete the Asteroid
+                if self.y is bottom_border_position_y:
+
+                    # Remove the Asteroid from the Asteroid list to update the amount of playable Asteroids
+                    Asteroids.pop(Asteroids.index(self))
+
+                    # Delete the Asteroid before it has a chance to cause any bugs to the other playable entities
+                    del self
+
+                    # Return false to stop the movement of the Asteroid
+                    return False
+            
             i = box.addch(self.y, self.x, "*", curses.A_BOLD)
             time.sleep(1/60)
     
