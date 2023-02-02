@@ -28,12 +28,22 @@ player_sprite = "▲"
 
 all_positions = []
 
+all_bullets = []
+
 """ top-left: [1,1] top-right: [28, 1] """
 
 top_border_position_y = 1
 top_border_position_x = [i for i in range(1, 28)]
 
 bottom_border_position_y = 18
+
+
+""" Some details that need to be taken into account """
+Refreshes = 0
+Asteroids_Destroyed = []
+current_score = 0
+
+PreviousHighScore = 0
 
 class Asteroid:
 
@@ -71,10 +81,27 @@ class Asteroid:
         while True:
             box.addch(self.y, self.x, " ")
 
+            for i in all_bullets:
+                if self.y == i.y and self.x == i.x:
+                    Asteroids_Destroyed.append(self.y)
+
+                    # Remove the Asteroid from the Asteroid list to update the amount of playable Asteroids
+                    Asteroids.pop(Asteroids.index(self))
+
+                    # Delete the Asteroid before it has a chance to cause any bugs to the other playable entities
+                    del self
+
+                    # Return false to stop the movement of the Asteroid
+                    return False
+
             # # If the position of the Asteroid is not the bottom of the border then continue normally
             if self.y is not bottom_border_position_y and self.x != 29 and self.x != 0:
-                self.x += random.randint(-1, 1)
-                self.y += random.randint(0, 1)
+
+                move_rate = random.randint(0, 100)
+                if move_rate > 80:
+                    self.x += random.randint(-1, 1)
+                    self.y += random.randint(0, 1)
+                else: pass
 
             # If the position in the x-axis is bigger than the largest position in of the x-axis of the border than delete the Asteroid
             elif self.x == 29:
@@ -100,8 +127,9 @@ class Asteroid:
 
             # If the position of the Asteroid is the same as the position of any other entity then kill the Asteroid
             else:
-                for i in all_positions:
-                    if self.x is i.x and self.y is i.y and i != self:
+                for i in all_bullets:
+                    if self.y == i.y and self.x == i.x:
+                        Asteroids_Destroyed.append(self.y)
 
                         # Remove the Asteroid from the Asteroid list to update the amount of playable Asteroids
                         Asteroids.pop(Asteroids.index(self))
@@ -111,7 +139,7 @@ class Asteroid:
 
                         # Return false to stop the movement of the Asteroid
                         return False
-
+                    
                 # If the Asteroid reached the bottom of the border then delete the Asteroid
                 if self.y is bottom_border_position_y:
 
@@ -138,8 +166,6 @@ class Player:
         self.y = player_y
         self.collided = collided
         self.bullet_spawned = False
-
-        all_positions.append(self)
 
     def Player_Movement(self):
         # Handle Player Movement
@@ -180,7 +206,7 @@ class Player:
                 self.Draw()
     
     def Shoot(self):
-        new_bullet = Bullet()
+        new_bullet = Bullet(player.x, player.y)
         self.bullet_spawned = True
         return new_bullet
     
@@ -194,30 +220,21 @@ class Player:
     
     def Dead(self):
         del self
-    
+
+    # Possible Animation Algorithm
     def Animate(self):
-        # Possible Animation Algorithm
-        # if key == ord("w"):
-        #     player_sprite = "▲"
-        # elif key == ord("s"):
-        #     player_sprite = "▼"
-        # elif key == ord("d"):
-        #     player_sprite = "▶"
-        # elif key == ord("a"):
-        #     player_sprite = "◀"
         pass
     
 class Bullet:
-    def __init__(self, collided = False):
-        self.x = player.x
-        self.y = player.y - 1
+    def __init__(self, x, y, collided = False):
+        self.x = x
+        self.y = y - 1
         self.collided = collided
         self.bullet_sprite = "|"
+        all_bullets.append(self)
 
         bullet_thread = Thread(target = self.Move)
         bullet_thread.start()
-
-        all_positions.append(self)
     
     def __del__(self):
         box.addch(self.y, self.x, " ")
@@ -229,15 +246,10 @@ class Bullet:
             if self.y is not top_border_position_y:
                 self.y -= 1
                 self.Draw()
-
-                for i in all_positions:
-                    if self.y == i.y:
-                        Asteroids_Destroyed.__add__(1)
+                
             else:
-                # all_positions.pop(Asteroids.index(self))
                 box.addch(self.y, self.x, " ")
-                self.y = bottom_border_position_y
-                self.x = top_border_position_x[-1]
+                all_bullets.pop(all_bullets.index(self))
                 del self
                 return False
             time.sleep(1/60)
@@ -255,11 +267,18 @@ player = Player()
 Pthread = Thread(target = player.Player_Movement)
 Pthread.start()
 
-Refreshes = 0
-Asteroids_Destroyed = 0
-current_score = 0
-
+# Get the current High Score
 HighScoreFile = open(r"HighScore.txt")
+# Lines = HighScoreFile.readlines()
+# for line in Lines:
+#     for i in line:
+#         if i.isdigit() == True:
+#             PreviousHighScore = i
+
+PreviousHighScore = HighScoreFile.read(3)
+
+# The number of previous Asteroids Destroyed before the loop
+previous_AD = len(Asteroids_Destroyed)
 
 while True:
     curses.curs_set(False)
@@ -273,8 +292,6 @@ while True:
     # Create the the chance of creating a new Asteroid
     chance = random.randint(0, spawn_chance)
 
-    Acounter = 0
-
     if chance < 2:
         Aname = random.randint(0, 100)
         Aname = Asteroid()
@@ -286,26 +303,30 @@ while True:
 
     coordinates = "[ " + coordinate_values + " ] "
 
-    Asteroids_Destroyed
-
-    # if Asteroids_Destroyed > Asteroids_Destroyed:
-    #     current_score += 50
-
     Refreshes += 1
 
     if Refreshes == 1:
         box.refresh()
         Refreshes = 0
 
-    # if int(HighScoreFile) <= current_score:
-    #     HighScoreFile.write(current_score)
+    # Serves as a check to see if any Asteroid was destroyed before the loop restarted
+    if previous_AD < len(Asteroids_Destroyed):
+        current_score += 50
+
+        # Reset the variable check to the current ammount of Asteroids destroyed
+        previous_AD = len(Asteroids_Destroyed)
+    if int(PreviousHighScore) <= current_score:
+        HighScoreFile = open("HighScore.txt", "w")
+        HighScoreFile.write(str(current_score))
+        HighScoreFile = open("HighScore.txt", "r")
+        PreviousHighScore = HighScoreFile.read(3)
 
     main_screen.addstr(6, 30, "Coordinates:", curses.A_UNDERLINE) # Print the coordinates of the player in the hud screen
     main_screen.addstr(7, 30, coordinates, curses.A_BOLD) # Print the coordinate vector of the player in the hud screen
     main_screen.addstr(10, 30, "Asteroids Destroyed:", curses.A_UNDERLINE) # Print the number of Asteroids destroyed in the hud screen
-    main_screen.addstr(11, 30, str(Asteroids_Destroyed), curses.A_BOLD)
+    main_screen.addstr(11, 30, "Score: " + str(current_score), curses.A_BOLD)
     main_screen.addstr(13, 30, "Asteroids:", curses.A_UNDERLINE) # Print the number of Asteroids in game
     main_screen.addstr(14, 30, str(Asteroids_Count), curses.A_BOLD)
-    main_screen.addstr(16, 30, "High Score: " + HighScoreFile.read(2), curses.A_UNDERLINE)
+    main_screen.addstr(16, 30, "High Score: " + PreviousHighScore, curses.A_UNDERLINE)
 
-    time.sleep(1/60) # Adjust the frame rate to wait a sixteith of a second
+    time.sleep(1/60) # Adjust the frame rate to wait a sixteenth of a second
