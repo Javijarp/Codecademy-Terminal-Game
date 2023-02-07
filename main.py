@@ -2,6 +2,7 @@ import curses
 import random
 import time
 from threading import Thread
+import os
 
 main_screen = curses.initscr()
 
@@ -134,6 +135,10 @@ class Asteroid:
                         # Remove the Asteroid from the Asteroid list to update the amount of playable Asteroids
                         Asteroids.pop(Asteroids.index(self))
 
+                        box.addstr(self.y, self.x, "50!", curses.A_BLINK)
+
+                        # box.addstr(self.y, self.x, "   ")
+
                         # Delete the Asteroid before it has a chance to cause any bugs to the other playable entities
                         del self
 
@@ -160,17 +165,25 @@ class Asteroid:
         pass
 
 class Player:
-    def __init__(self, player_y = player_y, player_x = player_x, collided = False):
+    def __init__(self, player_y = player_y, player_x = player_x, collided = True):
         self.position = [player_x, player_y]
         self.x = player_x
         self.y = player_y
         self.collided = collided
         self.bullet_spawned = False
 
+    def __del__(self):
+        box.addch(self.y, self.x, " ")
+        self.collided = False
+        return self.collided
+
     def Player_Movement(self):
         # Handle Player Movement
 
         while True:
+
+            if self.collided == False:
+                return False
             key = box.getch()
 
             if key == ord("w"):
@@ -215,11 +228,9 @@ class Player:
         player_ch = box.addch(self.y, self.x, player_sprite, curses.A_NORMAL)
         for i in Asteroids:
             if self.x == i.x and self.y == i.x and i != self:
-                self.Dead()
-        return player_ch
-    
-    def Dead(self):
-        del self
+                self.collided = False
+                box.addstr(self.y, self.x, "Game Over!", curses.A_UNDERLINE)
+                return self.collided
 
     # Possible Animation Algorithm
     def Animate(self):
@@ -269,12 +280,8 @@ Pthread.start()
 
 # Get the current High Score
 HighScoreFile = open(r"HighScore.txt")
-# Lines = HighScoreFile.readlines()
-# for line in Lines:
-#     for i in line:
-#         if i.isdigit() == True:
-#             PreviousHighScore = i
 
+# Get the previous High Score before entering the game
 PreviousHighScore = HighScoreFile.read(3)
 
 # The number of previous Asteroids Destroyed before the loop
@@ -328,5 +335,11 @@ while True:
     main_screen.addstr(13, 30, "Asteroids:", curses.A_UNDERLINE) # Print the number of Asteroids in game
     main_screen.addstr(14, 30, str(Asteroids_Count), curses.A_BOLD)
     main_screen.addstr(16, 30, "High Score: " + PreviousHighScore, curses.A_UNDERLINE)
+
+    if player.collided == False:
+        False
+        time.sleep(10)
+        os.system("TASKKILL /K main.py")
+        
 
     time.sleep(1/60) # Adjust the frame rate to wait a sixteenth of a second
