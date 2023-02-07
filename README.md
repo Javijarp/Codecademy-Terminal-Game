@@ -3,4 +3,4 @@
   
   # Starting The Game
   
-  To start the game open ``cmd`` and then ``cd`` to the directory where you have saved the program and type ''python3 main.py''. The game should automatically start!
+  To start the game open ``cmd`` and then ``cd`` to the directory where you have saved the program and type ``python3 main.py``. The game should automatically start!
